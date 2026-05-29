@@ -125,13 +125,14 @@ function today(){const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth(
 function nowTime(){const d=new Date();return `${pad(d.getHours())}:${pad(d.getMinutes())}`}
 function nice(k){const[y,m,d]=k.split("-");return `${d}.${m}.${y}`}
 function info(t){const e=document.getElementById("toast");e.textContent=t;e.classList.add("show");clearTimeout(window.tt);window.tt=setTimeout(()=>e.classList.remove("show"),3000)}
-function blank(){return{remainders:{kgt3:0,kgt2:0,food:0},entries:[]}}
+function blank(){return{remainders:{kgt3:0,kgt2:0,food:0},corrections:{kgt3:0,kgt2:0,food:0},entries:[]}}
 function load(){try{return JSON.parse(localStorage.getItem(KEY))||blank()}catch(e){return blank()}}
 function save(d){localStorage.setItem(KEY,JSON.stringify(d))}
 function todayEntries(d){return d.entries.filter(e=>e.date===today())}
 function liftedTotal(d,untilIndex=null){let entries=untilIndex===null?d.entries:d.entries.slice(0,untilIndex+1);return entries.reduce((s,e)=>s+ZONES.reduce((a,z)=>a+(Number(e[z.id])||0),0),0)}
 function liftedTodayTotal(d){return todayEntries(d).reduce((s,e)=>s+ZONES.reduce((a,z)=>a+(Number(e[z.id])||0),0),0)}
 function liftedTodayByZone(d,zid){return todayEntries(d).reduce((s,e)=>s+(Number(e[zid])||0),0)}
+function correctedByZone(d,zid){return Number(d.corrections?.[zid])||0}
 function remainingByZone(d,zid){return Math.max(0,(Number(d.remainders?.[zid])||0)-liftedTodayByZone(d,zid))}
 function totalRemainingToday(d){return ZONES.reduce((s,z)=>s+remainingByZone(d,z.id),0)}
 function render(){
@@ -184,14 +185,15 @@ async function openRemaindersEditor(){
   const ok=await auth();
   if(!ok)return;
   const d=load(), modal=document.getElementById("remaindersModal"), box=document.getElementById("remaindersFields");
-  box.innerHTML=ZONES.map(z=>`<div class="field"><label>${z.title}</label><input class="rem-input" inputmode="numeric" data-zone="${z.id}" value="${Number(d.remainders?.[z.id])||0}" placeholder="0"></div>`).join("");
+  box.innerHTML=ZONES.map(z=>`<div class="field"><label>${z.title} — сколько осталось поднять всего</label><input class="rem-input" inputmode="numeric" data-zone="${z.id}" value="${Number(d.remainders?.[z.id])||0}" placeholder="0"></div><div class="field"><label>${z.title} — уже числится поднятым, справочно</label><input class="corr-input" inputmode="numeric" data-zone="${z.id}" value="${Number(d.corrections?.[z.id])||0}" placeholder="0"></div>`).join("");
   box.querySelectorAll("input").forEach(i=>i.oninput=e=>e.target.value=e.target.value.replace(/\D/g,""));
   modal.classList.add("show");
 }
 function saveRemainders(){
-  const d=load();d.remainders||={};
+  const d=load();d.remainders||={};d.corrections||={};
   document.querySelectorAll(".rem-input").forEach(i=>d.remainders[i.dataset.zone]=Number(i.value)||0);
-  save(d);document.getElementById("remaindersModal").classList.remove("show");info("Остатки сохранены");render();
+  document.querySelectorAll(".corr-input").forEach(i=>d.corrections[i.dataset.zone]=Number(i.value)||0);
+  save(d);document.getElementById("remaindersModal").classList.remove("show");info("Остатки и корректировки сохранены");render();
 }
 function saveLift(){
   const entry={date:today(),time:nowTime()};
