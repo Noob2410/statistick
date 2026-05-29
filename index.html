@@ -153,11 +153,11 @@ function renderRemaining(d){
   document.getElementById("remainingGrid").innerHTML=ZONES.map(z=>{
     const set=Number(d.remainders?.[z.id])||0;
     const rem=remainingByZone(d,z.id);
-    const pct=set?Math.round((rem/set)*100):0;
+    const pct=set?Math.round((liftedTodayByZone(d,z.id)/set)*100):0;
     return `<div class="zone-card"><div class="zone-head">${z.title}</div><div class="zone-body">
       <div class="zone-stats">
         <div class="mini-stat"><div class="label">Осталось поднять</div><div class="value">${rem}</div></div>
-        <div class="mini-stat"><div class="label">% остатка</div><div class="value">${pct}%</div></div>
+        <div class="mini-stat"><div class="label">% поднято</div><div class="value">${pct}%</div></div>
       </div>
     </div></div>`;
   }).join("");
