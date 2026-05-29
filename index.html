@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Заполненность антресоли</title>
+<style>
+:root{
+  --bg:#f4f6f8;--card:#fff;--text:#172033;--muted:#667085;--line:#d9dee7;
+  --blue:#1f4e78;--green:#d9ead3;--yellow:#fff2cc;--red:#f4cccc;
+  --shadow:0 10px 24px rgba(16,24,40,.08);--radius:18px;
+}
+*{box-sizing:border-box}
+html,body{max-width:100%;overflow-x:hidden}
+body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--text)}
+header{position:sticky;top:0;z-index:20;background:#172033;color:white;padding:14px 18px;box-shadow:0 4px 18px rgba(0,0,0,.14)}
+.topbar{max-width:1500px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+h1{font-size:20px;margin:0}.status{font-size:13px;color:#d0d5dd}.date-pill{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);padding:8px 12px;border-radius:999px;font-weight:800}
+main{max-width:1500px;margin:18px auto 40px;padding:0 14px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+button{border:0;border-radius:12px;padding:10px 14px;background:var(--blue);color:#fff;font-weight:800;cursor:pointer;min-height:40px;font-size:15px}
+button.light{background:#fff;color:var(--text);border:1px solid var(--line)}button.danger{background:#b42318}
+.summary{display:grid;grid-template-columns:repeat(4,minmax(180px,1fr));gap:12px;margin-bottom:14px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}.stat .label{color:var(--muted);font-size:13px;margin-bottom:8px;font-weight:800}.stat .value{font-size:28px;font-weight:900}
+.panel{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin:12px 0;overflow:hidden}
+.panel h2,.panel h3{margin:0 0 12px}
+.start-grid,.input-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.zone-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.zone-head{background:#172033;color:#fff;text-align:center;padding:14px;font-weight:900;font-size:18px}
+.zone-body{padding:14px}
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}.field label{color:var(--muted);font-size:13px;font-weight:850}
+input{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center;background:#fff;font-size:17px;font-weight:850;color:var(--text)}
+input:focus{outline:2px solid rgba(31,78,120,.25);border-color:var(--blue)}
+.zone-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px}
+.mini-stat{border:1px solid var(--line);border-radius:12px;padding:10px;background:#fbfcfe}.mini-stat .label{color:var(--muted);font-size:12px;font-weight:800;margin-bottom:4px}.mini-stat .value{font-size:20px;font-weight:900}
+.chart-wrap{position:relative;overflow:hidden}.chart-scroll{width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;position:relative}
+canvas{display:block;width:100%;height:260px;border:1px solid var(--line);border-radius:14px;background:#fff}.tooltip{position:absolute;display:none;background:#172033;color:white;border-radius:12px;padding:10px 12px;font-size:13px;font-weight:800;box-shadow:0 10px 24px rgba(0,0,0,.22);pointer-events:none;z-index:5;min-width:180px}.tooltip .muted{color:#d0d5dd}.tooltip.show{display:block}
+.history-list{max-height:230px;overflow:auto;border:1px solid var(--line);border-radius:14px}.history-item{display:grid;grid-template-columns:1fr 100px 100px 100px 34px;gap:8px;align-items:center;padding:9px 10px;border-bottom:1px solid var(--line);font-size:14px}.history-item:last-child{border-bottom:0}.history-item b{font-weight:900}.small-delete{width:28px;height:28px;min-height:28px;padding:0;border-radius:999px;background:#fff;color:#b42318;border:1px solid #f0b8b2;font-size:18px}
+.toast{position:fixed;left:50%;top:84px;transform:translateX(-50%);background:#172033;color:#fff;padding:14px 18px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.25);z-index:9999;font-weight:800;max-width:92%;text-align:center;display:none}.toast.show{display:block}
+.modal-backdrop{position:fixed;inset:0;background:rgba(23,32,51,.58);display:none;align-items:center;justify-content:center;z-index:10000;padding:16px}.modal-backdrop.show{display:flex}.modal{background:#fff;border-radius:20px;box-shadow:0 24px 70px rgba(0,0,0,.28);width:100%;max-width:420px;padding:20px;border:1px solid var(--line)}.modal h3{margin:0 0 8px}.modal p{margin:0 0 14px;color:var(--muted);font-size:14px}.modal input{text-align:left}.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+@media(max-width:1050px){.summary,.start-grid,.input-grid{grid-template-columns:1fr}.history-item{grid-template-columns:1fr 70px 70px 70px 30px}}
+@media(max-width:760px){.zone-stats{grid-template-columns:1fr}main{padding:0 8px;margin-top:10px}header{position:static;padding:12px 10px}h1{font-size:17px}.status{width:100%;font-size:12px}.date-pill{font-size:13px}.actions{gap:8px}button{font-size:14px;padding:9px 11px}.stat .value{font-size:24px}.chart-scroll canvas{height:240px;min-width:620px}.history-item{font-size:12px;gap:5px;padding:8px 6px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="topbar">
+    <h1>Заполненность антресоли</h1>
+    <div class="status">КГТ Блок 3 / КГТ Блок 2 / Питание</div>
+    <div class="date-pill" id="todayLabel">Дата</div>
+  </div>
+</header>
+<div id="toast" class="toast"></div>
+<main>
+  <div class="actions">
+    <button class="light" id="editRemaindersBtn">Изменить остатки</button>
+    <button id="saveLiftBtn">Сохранить поднято</button>
+    <button class="danger" id="clearTodayBtn">Очистить сегодняшний день</button>
+    <button class="danger" id="clearAllBtn">Очистить всю историю</button>
+    <button class="light" id="exportBtn">Скачать CSV</button>
+  </div>
+
+  <section class="summary" id="summary"></section>
+
+  <section class="panel">
+    <h2>Осталось поднять</h2>
+    <div class="start-grid" id="remainingGrid"></div>
+  </section>
+
+  <section class="panel">
+    <h2>ПОДНЯЛИ</h2>
+    <div class="input-grid" id="liftGrid"></div>
+  </section>
+
+  <section class="panel chart-wrap">
+    <h2>Кривая: сколько подняли</h2>
+    <div class="chart-scroll"><canvas id="liftedChart"></canvas><div class="tooltip"></div></div>
+  </section>
+
+  <section class="panel chart-wrap">
+    <h2>Кривая: сколько осталось поднять</h2>
+    <div class="chart-scroll"><canvas id="remainingChart"></canvas><div class="tooltip"></div></div>
+  </section>
+
+  <section class="panel">
+    <h2>История вводов</h2>
+    <div class="history-list" id="history"></div>
+  </section>
+</main>
+
+<div class="modal-backdrop" id="authModal">
+  <div class="modal">
+    <h3>Подтверждение доступа</h3>
+    <p>Введите логин и пароль для удаления данных.</p>
+    <input id="authLogin" placeholder="Логин" inputmode="numeric">
+    <input id="authPassword" placeholder="Пароль" inputmode="numeric" type="password">
+    <div class="modal-actions">
+      <button class="light" id="authCancel">Отмена</button>
+      <button id="authConfirm">Подтвердить</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="remaindersModal">
+  <div class="modal">
+    <h3>Изменить остатки</h3>
+    <p>Введите, сколько осталось поднять по каждому блоку. Эти значения будут уменьшаться на количество, поднятое за сегодняшний день.</p>
+    <div id="remaindersFields"></div>
+    <div class="modal-actions">
+      <button class="light" id="remaindersCancel">Отмена</button>
+      <button id="remaindersSave">Сохранить остатки</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const LOGIN="156783",PASS="156783",KEY="mezzanine_balance_v1";
+const ZONES=[
+  {id:"kgt3",title:"КГТ БЛОК 3"},
+  {id:"kgt2",title:"КГТ БЛОК 2"},
+  {id:"food",title:"Питание блок 2"}
+];
+function pad(n){return String(n).padStart(2,"0")}
+function today(){const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`}
+function nowTime(){const d=new Date();return `${pad(d.getHours())}:${pad(d.getMinutes())}`}
+function nice(k){const[y,m,d]=k.split("-");return `${d}.${m}.${y}`}
+function info(t){const e=document.getElementById("toast");e.textContent=t;e.classList.add("show");clearTimeout(window.tt);window.tt=setTimeout(()=>e.classList.remove("show"),3000)}
+function blank(){return{remainders:{kgt3:0,kgt2:0,food:0},entries:[]}}
+function load(){try{return JSON.parse(localStorage.getItem(KEY))||blank()}catch(e){return blank()}}
+function save(d){localStorage.setItem(KEY,JSON.stringify(d))}
+function todayEntries(d){return d.entries.filter(e=>e.date===today())}
+function liftedTotal(d,untilIndex=null){let entries=untilIndex===null?d.entries:d.entries.slice(0,untilIndex+1);return entries.reduce((s,e)=>s+ZONES.reduce((a,z)=>a+(Number(e[z.id])||0),0),0)}
+function liftedTodayTotal(d){return todayEntries(d).reduce((s,e)=>s+ZONES.reduce((a,z)=>a+(Number(e[z.id])||0),0),0)}
+function liftedTodayByZone(d,zid){return todayEntries(d).reduce((s,e)=>s+(Number(e[zid])||0),0)}
+function remainingByZone(d,zid){return Math.max(0,(Number(d.remainders?.[zid])||0)-liftedTodayByZone(d,zid))}
+function totalRemainingToday(d){return ZONES.reduce((s,z)=>s+remainingByZone(d,z.id),0)}
+function render(){
+  const d=load();
+  document.getElementById("todayLabel").textContent="Сегодня: "+nice(today());
+  renderSummary(d);renderRemaining(d);renderLift(d);renderHistory(d);drawLiftedChart(d);drawRemainingChart(d);bind();
+}
+function renderSummary(d){
+  const initial=ZONES.reduce((s,z)=>s+(Number(d.remainders?.[z.id])||0),0),todayLift=liftedTodayTotal(d),allLift=liftedTotal(d),remaining=totalRemainingToday(d);
+  const percent=initial?Math.round((todayLift/initial)*100):0;
+  document.getElementById("summary").innerHTML=`
+    <div class="stat"><div class="label">Задано поднять</div><div class="value">${initial}</div></div>
+    <div class="stat"><div class="label">Подняли сегодня</div><div class="value">${todayLift}</div></div>
+    <div class="stat"><div class="label">Осталось поднять</div><div class="value">${remaining}</div></div>
+    <div class="stat"><div class="label">Выполнено сегодня</div><div class="value">${percent}%</div></div>`;
+}
+function renderRemaining(d){
+  document.getElementById("remainingGrid").innerHTML=ZONES.map(z=>{
+    const set=Number(d.remainders?.[z.id])||0;
+    const rem=remainingByZone(d,z.id);
+    const pct=set?Math.round((rem/set)*100):0;
+    return `<div class="zone-card"><div class="zone-head">${z.title}</div><div class="zone-body">
+      <div class="zone-stats">
+        <div class="mini-stat"><div class="label">Осталось поднять</div><div class="value">${rem}</div></div>
+        <div class="mini-stat"><div class="label">% остатка</div><div class="value">${pct}%</div></div>
+      </div>
+    </div></div>`;
+  }).join("");
+}
+function renderLift(d){
+  document.getElementById("liftGrid").innerHTML=ZONES.map(z=>`
+    <div class="zone-card"><div class="zone-head">${z.title}</div><div class="zone-body">
+      <div class="field"><label>Подняли сейчас</label><input class="lift-input" inputmode="numeric" data-zone="${z.id}" value="" placeholder="0"></div>
+
+    </div></div>`).join("");
+}
+function renderHistory(d){
+  document.getElementById("history").innerHTML=d.entries.slice().reverse().map((e,revIndex)=>{
+    const index=d.entries.length-1-revIndex;
+    return `<div class="history-item"><span>${nice(e.date)} ${e.time}</span><b>${e.kgt3||0}</b><b>${e.kgt2||0}</b><b>${e.food||0}</b><button class="small-delete" data-del="${index}">×</button></div>`
+  }).join("") || `<div class="history-item"><span>Нет вводов</span><b>КГТ3</b><b>КГТ2</b><b>Питание</b><span></span></div>`;
+}
+function bind(){
+  document.querySelectorAll("input").forEach(i=>{i.oninput=e=>{e.target.value=e.target.value.replace(/\\D/g,"");previewAfter()}});
+  document.getElementById("editRemaindersBtn").onclick=openRemaindersEditor;
+  document.getElementById("saveLiftBtn").onclick=saveLift;
+  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=e=>deleteEntry(Number(e.currentTarget.dataset.del)));
+}
+async function openRemaindersEditor(){
+  const ok=await auth();
+  if(!ok)return;
+  const d=load(), modal=document.getElementById("remaindersModal"), box=document.getElementById("remaindersFields");
+  box.innerHTML=ZONES.map(z=>`<div class="field"><label>${z.title}</label><input class="rem-input" inputmode="numeric" data-zone="${z.id}" value="${Number(d.remainders?.[z.id])||0}" placeholder="0"></div>`).join("");
+  box.querySelectorAll("input").forEach(i=>i.oninput=e=>e.target.value=e.target.value.replace(/\D/g,""));
+  modal.classList.add("show");
+}
+function saveRemainders(){
+  const d=load();d.remainders||={};
+  document.querySelectorAll(".rem-input").forEach(i=>d.remainders[i.dataset.zone]=Number(i.value)||0);
+  save(d);document.getElementById("remaindersModal").classList.remove("show");info("Остатки сохранены");render();
+}
+function saveLift(){
+  const entry={date:today(),time:nowTime()};
+  let has=false;
+  document.querySelectorAll(".lift-input").forEach(i=>{entry[i.dataset.zone]=Number(i.value)||0;if(entry[i.dataset.zone]>0)has=true});
+  if(!has){info("Введите хотя бы одно значение");return}
+  const d=load();d.entries.push(entry);save(d);info("Ввод сохранен");render();
+}
+function previewAfter(){}
+function deleteEntry(index){
+  if(!confirm("Удалить ошибочный ввод?"))return;
+  const d=load();d.entries.splice(index,1);save(d);info("Ввод удален");render();
+}
+function drawLiftedChart(d){
+  const canvas=document.getElementById("liftedChart"),ctx=canvas.getContext("2d"),ratio=devicePixelRatio||1;
+  canvas.width=canvas.clientWidth*ratio;canvas.height=canvas.clientHeight*ratio;ctx.scale(ratio,ratio);
+  const W=canvas.clientWidth,H=canvas.clientHeight;ctx.clearRect(0,0,W,H);
+  ctx.font="14px system-ui";ctx.fillStyle="#172033";ctx.fillText("Сколько подняли на антресоль: накопительно",18,26);
+  const tip=canvas.parentElement.querySelector(".tooltip");canvas.pts=[];
+  const points=[{label:"Старт",date:today(),time:"",value:0,extra:"Еще ничего не поднято"}];
+  d.entries.forEach((e,i)=>points.push({label:String(i+1),date:e.date,time:e.time,value:liftedTotal(d,i),extra:`Подняли вводом: КГТ3 ${e.kgt3||0}; КГТ2 ${e.kgt2||0}; Питание ${e.food||0}`}));
+  if(!points.length)return;
+  const L=50,R=18,T=44,B=44,PW=W-L-R,PH=H-T-B,maxY=Math.max(10,Math.ceil(Math.max(...points.map(p=>p.value))/10)*10);
+  ctx.strokeStyle="#d9dee7";for(let i=0;i<=4;i++){let y=T+PH/4*i;ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(W-R,y);ctx.stroke();ctx.fillStyle="#667085";ctx.font="11px system-ui";ctx.fillText(String(Math.round(maxY-maxY/4*i)),10,y+4)}
+  const x=i=>points.length===1?L+PW/2:L+PW/(points.length-1)*i,y=v=>T+PH-(v/maxY)*PH;
+  ctx.strokeStyle="#1f4e78";ctx.lineWidth=3;ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(x(i),y(p.value)):ctx.moveTo(x(i),y(p.value)));ctx.stroke();
+  ctx.fillStyle="#1f4e78";points.forEach((p,i)=>{const px=x(i),py=y(p.value);canvas.pts.push({x:px,y:py,...p});ctx.beginPath();ctx.arc(px,py,4,0,Math.PI*2);ctx.fill()});
+  ctx.fillStyle="#667085";ctx.font="11px system-ui";const step=Math.max(1,Math.ceil(points.length/8));points.forEach((p,i)=>{if(i%step===0||i===points.length-1){ctx.save();ctx.translate(x(i),H-16);ctx.rotate(-.35);ctx.fillText(p.label,-8,0);ctx.restore()}});
+  const show=e=>{const rect=canvas.getBoundingClientRect(),cx=e.touches?e.touches[0].clientX:e.clientX,cy=e.touches?e.touches[0].clientY:e.clientY,mx=cx-rect.left,my=cy-rect.top;let near=null,best=999;canvas.pts.forEach(p=>{const dist=Math.hypot(mx-p.x,my-p.y);if(dist<best){best=dist;near=p}});if(!near||best>22){tip.classList.remove("show");return}tip.innerHTML=`<div>${near.label} · ${near.date} ${near.time||""}</div><div class="muted">Поднято накопительно: ${near.value}</div><div class="muted">${near.extra}</div>`;tip.style.left=Math.min(Math.max(near.x+12,8),rect.width-230)+"px";tip.style.top=Math.max(near.y-78,8)+"px";tip.classList.add("show")};
+  canvas.onmousemove=show;canvas.ontouchstart=show;canvas.ontouchmove=show;canvas.onmouseleave=()=>tip.classList.remove("show");
+}
+
+function drawRemainingChart(d){
+  const canvas=document.getElementById("remainingChart"),ctx=canvas.getContext("2d"),ratio=devicePixelRatio||1;
+  canvas.width=canvas.clientWidth*ratio;canvas.height=canvas.clientHeight*ratio;ctx.scale(ratio,ratio);
+  const W=canvas.clientWidth,H=canvas.clientHeight;ctx.clearRect(0,0,W,H);
+  ctx.font="14px system-ui";ctx.fillStyle="#172033";ctx.fillText("Сколько осталось поднять после каждого ввода",18,26);
+  const tip=canvas.parentElement.querySelector(".tooltip");canvas.pts=[];
+  const points=[{label:"Старт",date:today(),time:"",value:totalRemainingToday({...d,entries:[]}),extra:"Начальный остаток"}];
+  d.entries.forEach((e,i)=>points.push({label:String(i+1),date:e.date,time:e.time,value:Math.max(0,totalRemainingToday({...d,entries:d.entries.slice(0,i+1)})),extra:`Осталось: КГТ3 ${Math.max(0,(Number(d.remainders?.kgt3)||0)-d.entries.slice(0,i+1).reduce((s,x)=>s+(Number(x.kgt3)||0),0))}; КГТ2 ${Math.max(0,(Number(d.remainders?.kgt2)||0)-d.entries.slice(0,i+1).reduce((s,x)=>s+(Number(x.kgt2)||0),0))}; Питание ${Math.max(0,(Number(d.remainders?.food)||0)-d.entries.slice(0,i+1).reduce((s,x)=>s+(Number(x.food)||0),0))}`})); 
+  drawPoints(canvas,ctx,tip,points);
+}
+function drawPoints(canvas,ctx,tip,points){
+  const W=canvas.clientWidth,H=canvas.clientHeight;
+  if(!points.length)return;
+  const L=50,R=18,T=44,B=44,PW=W-L-R,PH=H-T-B,maxY=Math.max(10,Math.ceil(Math.max(...points.map(p=>p.value))/10)*10);
+  ctx.strokeStyle="#d9dee7";for(let i=0;i<=4;i++){let y=T+PH/4*i;ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(W-R,y);ctx.stroke();ctx.fillStyle="#667085";ctx.font="11px system-ui";ctx.fillText(String(Math.round(maxY-maxY/4*i)),10,y+4)}
+  const x=i=>points.length===1?L+PW/2:L+PW/(points.length-1)*i,y=v=>T+PH-(v/maxY)*PH;
+  ctx.strokeStyle="#1f4e78";ctx.lineWidth=3;ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(x(i),y(p.value)):ctx.moveTo(x(i),y(p.value)));ctx.stroke();
+  ctx.fillStyle="#1f4e78";points.forEach((p,i)=>{const px=x(i),py=y(p.value);canvas.pts.push({x:px,y:py,...p});ctx.beginPath();ctx.arc(px,py,4,0,Math.PI*2);ctx.fill()});
+  ctx.fillStyle="#667085";ctx.font="11px system-ui";const step=Math.max(1,Math.ceil(points.length/8));points.forEach((p,i)=>{if(i%step===0||i===points.length-1){ctx.save();ctx.translate(x(i),H-16);ctx.rotate(-.35);ctx.fillText(p.label,-8,0);ctx.restore()}});
+  const show=e=>{const rect=canvas.getBoundingClientRect(),cx=e.touches?e.touches[0].clientX:e.clientX,cy=e.touches?e.touches[0].clientY:e.clientY,mx=cx-rect.left,my=cy-rect.top;let near=null,best=999;canvas.pts.forEach(p=>{const dist=Math.hypot(mx-p.x,my-p.y);if(dist<best){best=dist;near=p}});if(!near||best>22){tip.classList.remove("show");return}tip.innerHTML=`<div>${near.label} · ${near.date} ${near.time||""}</div><div class="muted">Значение: ${near.value}</div><div class="muted">${near.extra}</div>`;tip.style.left=Math.min(Math.max(near.x+12,8),rect.width-230)+"px";tip.style.top=Math.max(near.y-78,8)+"px";tip.classList.add("show")};
+  canvas.onmousemove=show;canvas.ontouchstart=show;canvas.ontouchmove=show;canvas.onmouseleave=()=>tip.classList.remove("show");
+}
+function auth(){return new Promise(res=>{const m=document.getElementById("authModal"),l=document.getElementById("authLogin"),p=document.getElementById("authPassword");l.value="";p.value="";m.classList.add("show");l.focus();document.getElementById("authCancel").onclick=()=>{m.classList.remove("show");res(false)};document.getElementById("authConfirm").onclick=()=>{m.classList.remove("show");if(l.value===LOGIN&&p.value===PASS)res(true);else{info("Вы не имеете прав удалять данные");res(false)}}})}
+document.getElementById("clearTodayBtn").onclick=async()=>{if(!await auth())return;if(!confirm("Удалить все вводы за сегодня?"))return;const d=load();d.entries=d.entries.filter(e=>e.date!==today());save(d);info("Сегодня очищен");render()}
+document.getElementById("clearAllBtn").onclick=async()=>{if(!await auth())return;if(!confirm("Удалить всю историю и заданные остатки?"))return;save(blank());info("Все очищено");render()}
+document.getElementById("remaindersCancel").onclick=()=>document.getElementById("remaindersModal").classList.remove("show");
+document.getElementById("remaindersSave").onclick=saveRemainders;
+document.getElementById("exportBtn").onclick=()=>{const d=load(),head=["Дата","Время","КГТ Блок 3","КГТ Блок 2","Питание","Поднято накопительно"],esc=v=>`"${String(v??"").replace(/"/g,'""')}"`,lines=[head.map(esc).join(";")];d.entries.forEach((e,i)=>lines.push([nice(e.date),e.time,e.kgt3||0,e.kgt2||0,e.food||0,liftedTotal(d,i)].map(esc).join(";")));const blob=new Blob(["\ufeff"+lines.join("\n")],{type:"text/csv;charset=utf-8"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`mezzanine-balance-${today()}.csv`;a.click();URL.revokeObjectURL(a.href)}
+render();
+</script>
+</body>
+</html>
