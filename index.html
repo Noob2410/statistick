@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Заполненность антресоли</title>
+<title>Учет поднятий на антресоль</title>
 <style>
 :root{
   --bg:#f4f6f8;--card:#fff;--text:#172033;--muted:#667085;--line:#d9dee7;
@@ -45,8 +45,8 @@ canvas{display:block;width:100%;height:260px;border:1px solid var(--line);border
 <body>
 <header>
   <div class="topbar">
-    <h1>Заполненность антресоли</h1>
-    <div class="status">КГТ Блок 3 / КГТ Блок 2 / Питание</div>
+    <h1>Учет поднятий на антресоль</h1>
+    <div class="status">КГТ Блок 3 / КГТ Блок 2 / Питание блок 2</div>
     <div class="date-pill" id="todayLabel">Дата</div>
   </div>
 </header>
@@ -68,7 +68,7 @@ canvas{display:block;width:100%;height:260px;border:1px solid var(--line);border
   </section>
 
   <section class="panel">
-    <h2>ПОДНЯЛИ</h2>
+    <h2>ПОДНЯЛИ / ВЫМЫЛОСЬ</h2>
     <div class="input-grid" id="liftGrid"></div>
   </section>
 
@@ -114,27 +114,47 @@ canvas{display:block;width:100%;height:260px;border:1px solid var(--line);border
 </div>
 
 <script>
-const LOGIN="156783",PASS="156783",KEY="mezzanine_balance_v1";
+const LOGIN="156783",PASS="156783",KEY="mezzanine_balance_v9_table_seed";
 const ZONES=[
   {id:"kgt3",title:"КГТ БЛОК 3"},
   {id:"kgt2",title:"КГТ БЛОК 2"},
-  {id:"food",title:"Питание блок 2"}
+  {id:"food",title:"Питание — БЛОК 2"}
 ];
 function pad(n){return String(n).padStart(2,"0")}
 function today(){const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`}
 function nowTime(){const d=new Date();return `${pad(d.getHours())}:${pad(d.getMinutes())}`}
 function nice(k){const[y,m,d]=k.split("-");return `${d}.${m}.${y}`}
 function info(t){const e=document.getElementById("toast");e.textContent=t;e.classList.add("show");clearTimeout(window.tt);window.tt=setTimeout(()=>e.classList.remove("show"),3000)}
-function blank(){return{remainders:{kgt3:0,kgt2:0,food:0},corrections:{kgt3:0,kgt2:0,food:0},entries:[]}}
+function blank(){return seedTableData()}
+function emptyData(){return{remainders:{kgt3:0,kgt2:0,food:0},corrections:{kgt3:0,kgt2:0,food:0},entries:[]}}
+
+function seedTableData(){
+  return {
+    remainders:{kgt3:4659,kgt2:0,food:6142},
+    corrections:{kgt3:0,kgt2:0,food:0},
+    entries:[
+      {date:"2025-05-27",time:"20:30",kgt3:115,kgt2:0,food:0,kgt3Washed:42,kgt2Washed:0,foodWashed:69},
+      {date:"2025-05-28",time:"20:30",kgt3:302,kgt2:0,food:0,kgt3Washed:34,kgt2Washed:0,foodWashed:98},
+      {date:"2025-05-29",time:"20:30",kgt3:427,kgt2:0,food:0,kgt3Washed:47,kgt2Washed:0,foodWashed:63},
+      {date:"2025-05-30",time:"20:30",kgt3:360,kgt2:0,food:0,kgt3Washed:36,kgt2Washed:0,foodWashed:63}
+    ]
+  }
+}
 function load(){try{return JSON.parse(localStorage.getItem(KEY))||blank()}catch(e){return blank()}}
 function save(d){localStorage.setItem(KEY,JSON.stringify(d))}
 function todayEntries(d){return d.entries.filter(e=>e.date===today())}
 function liftedTotal(d,untilIndex=null){let entries=untilIndex===null?d.entries:d.entries.slice(0,untilIndex+1);return entries.reduce((s,e)=>s+ZONES.reduce((a,z)=>a+(Number(e[z.id])||0),0),0)}
 function liftedTodayTotal(d){return todayEntries(d).reduce((s,e)=>s+ZONES.reduce((a,z)=>a+(Number(e[z.id])||0),0),0)}
+function washedKey(zid){return zid+"Washed"}
 function liftedTodayByZone(d,zid){return todayEntries(d).reduce((s,e)=>s+(Number(e[zid])||0),0)}
+function washedTodayByZone(d,zid){return todayEntries(d).reduce((s,e)=>s+(Number(e[washedKey(zid)])||0),0)}
+function spentTodayByZone(d,zid){return liftedTodayByZone(d,zid)+washedTodayByZone(d,zid)}
 function correctedByZone(d,zid){return Number(d.corrections?.[zid])||0}
-function remainingByZone(d,zid){return Math.max(0,(Number(d.remainders?.[zid])||0)-liftedTodayByZone(d,zid))}
+function remainingByZone(d,zid){return Math.max(0,(Number(d.remainders?.[zid])||0)-spentTodayByZone(d,zid))}
 function totalRemainingToday(d){return ZONES.reduce((s,z)=>s+remainingByZone(d,z.id),0)}
+function spentByZoneEntries(entries,zid){return entries.reduce((s,e)=>s+(Number(e[zid])||0)+(Number(e[washedKey(zid)])||0),0)}
+function remainingByZoneEntries(d,zid,entries){return Math.max(0,(Number(d.remainders?.[zid])||0)-spentByZoneEntries(entries,zid))}
+function totalRemainingByEntries(d,entries){return ZONES.reduce((s,z)=>s+remainingByZoneEntries(d,z.id,entries),0)}
 function render(){
   const d=load();
   document.getElementById("todayLabel").textContent="Сегодня: "+nice(today());
@@ -165,15 +185,15 @@ function renderRemaining(d){
 function renderLift(d){
   document.getElementById("liftGrid").innerHTML=ZONES.map(z=>`
     <div class="zone-card"><div class="zone-head">${z.title}</div><div class="zone-body">
-      <div class="field"><label>Подняли сейчас</label><input class="lift-input" inputmode="numeric" data-zone="${z.id}" value="" placeholder="0"></div>
+      <div class="field"><label>Подняли сейчас</label><input class="lift-input" inputmode="numeric" data-zone="${z.id}" value="" placeholder="0"></div><div class="field"><label>Вымылось сейчас</label><input class="washed-input" inputmode="numeric" data-zone="${z.id}" value="" placeholder="0"></div>
 
     </div></div>`).join("");
 }
 function renderHistory(d){
   document.getElementById("history").innerHTML=d.entries.slice().reverse().map((e,revIndex)=>{
     const index=d.entries.length-1-revIndex;
-    return `<div class="history-item"><span>${nice(e.date)} ${e.time}</span><b>${e.kgt3||0}</b><b>${e.kgt2||0}</b><b>${e.food||0}</b><button class="small-delete" data-del="${index}">×</button></div>`
-  }).join("") || `<div class="history-item"><span>Нет вводов</span><b>КГТ3</b><b>КГТ2</b><b>Питание</b><span></span></div>`;
+    return `<div class="history-item"><span>${nice(e.date)} ${e.time}</span><b>${e.kgt3||0}/${e.kgt3Washed||0}</b><b>${e.kgt2||0}/${e.kgt2Washed||0}</b><b>${e.food||0}/${e.foodWashed||0}</b><button class="small-delete" data-del="${index}">×</button></div>`
+  }).join("") || `<div class="history-item"><span>Нет вводов</span><b>КГТ3 п/в</b><b>КГТ2 п/в</b><b>Питание п/в</b><span></span></div>`;
 }
 function bind(){
   document.querySelectorAll("input").forEach(i=>{i.oninput=e=>{e.target.value=e.target.value.replace(/\\D/g,"");previewAfter()}});
@@ -199,6 +219,7 @@ function saveLift(){
   const entry={date:today(),time:nowTime()};
   let has=false;
   document.querySelectorAll(".lift-input").forEach(i=>{entry[i.dataset.zone]=Number(i.value)||0;if(entry[i.dataset.zone]>0)has=true});
+  document.querySelectorAll(".washed-input").forEach(i=>{entry[washedKey(i.dataset.zone)]=Number(i.value)||0;if(entry[washedKey(i.dataset.zone)]>0)has=true});
   if(!has){info("Введите хотя бы одно значение");return}
   const d=load();d.entries.push(entry);save(d);info("Ввод сохранен");render();
 }
@@ -232,8 +253,8 @@ function drawRemainingChart(d){
   const W=canvas.clientWidth,H=canvas.clientHeight;ctx.clearRect(0,0,W,H);
   ctx.font="14px system-ui";ctx.fillStyle="#172033";ctx.fillText("Сколько осталось поднять после каждого ввода",18,26);
   const tip=canvas.parentElement.querySelector(".tooltip");canvas.pts=[];
-  const points=[{label:"Старт",date:today(),time:"",value:totalRemainingToday({...d,entries:[]}),extra:"Начальный остаток"}];
-  d.entries.forEach((e,i)=>points.push({label:String(i+1),date:e.date,time:e.time,value:Math.max(0,totalRemainingToday({...d,entries:d.entries.slice(0,i+1)})),extra:`Осталось: КГТ3 ${Math.max(0,(Number(d.remainders?.kgt3)||0)-d.entries.slice(0,i+1).reduce((s,x)=>s+(Number(x.kgt3)||0),0))}; КГТ2 ${Math.max(0,(Number(d.remainders?.kgt2)||0)-d.entries.slice(0,i+1).reduce((s,x)=>s+(Number(x.kgt2)||0),0))}; Питание ${Math.max(0,(Number(d.remainders?.food)||0)-d.entries.slice(0,i+1).reduce((s,x)=>s+(Number(x.food)||0),0))}`})); 
+  const points=[{label:"Старт",date:today(),time:"",value:totalRemainingByEntries(d,[]),extra:"Начальный остаток"}];
+  d.entries.forEach((e,i)=>{const part=d.entries.slice(0,i+1);points.push({label:String(i+1),date:e.date,time:e.time,value:totalRemainingByEntries(d,part),extra:`Осталось: КГТ3 ${remainingByZoneEntries(d,"kgt3",part)}; КГТ2 ${remainingByZoneEntries(d,"kgt2",part)}; Питание ${remainingByZoneEntries(d,"food",part)}`})});
   drawPoints(canvas,ctx,tip,points);
 }
 function drawPoints(canvas,ctx,tip,points){
@@ -250,10 +271,11 @@ function drawPoints(canvas,ctx,tip,points){
 }
 function auth(){return new Promise(res=>{const m=document.getElementById("authModal"),l=document.getElementById("authLogin"),p=document.getElementById("authPassword");l.value="";p.value="";m.classList.add("show");l.focus();document.getElementById("authCancel").onclick=()=>{m.classList.remove("show");res(false)};document.getElementById("authConfirm").onclick=()=>{m.classList.remove("show");if(l.value===LOGIN&&p.value===PASS)res(true);else{info("Вы не имеете прав удалять данные");res(false)}}})}
 document.getElementById("clearTodayBtn").onclick=async()=>{if(!await auth())return;if(!confirm("Удалить все вводы за сегодня?"))return;const d=load();d.entries=d.entries.filter(e=>e.date!==today());save(d);info("Сегодня очищен");render()}
-document.getElementById("clearAllBtn").onclick=async()=>{if(!await auth())return;if(!confirm("Удалить всю историю и заданные остатки?"))return;save(blank());info("Все очищено");render()}
+document.getElementById("clearAllBtn").onclick=async()=>{if(!await auth())return;if(!confirm("Удалить всю историю и заданные остатки?"))return;save(emptyData());info("Все очищено");render()}
 document.getElementById("remaindersCancel").onclick=()=>document.getElementById("remaindersModal").classList.remove("show");
 document.getElementById("remaindersSave").onclick=saveRemainders;
-document.getElementById("exportBtn").onclick=()=>{const d=load(),head=["Дата","Время","КГТ Блок 3","КГТ Блок 2","Питание","Поднято накопительно"],esc=v=>`"${String(v??"").replace(/"/g,'""')}"`,lines=[head.map(esc).join(";")];d.entries.forEach((e,i)=>lines.push([nice(e.date),e.time,e.kgt3||0,e.kgt2||0,e.food||0,liftedTotal(d,i)].map(esc).join(";")));const blob=new Blob(["\ufeff"+lines.join("\n")],{type:"text/csv;charset=utf-8"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`mezzanine-balance-${today()}.csv`;a.click();URL.revokeObjectURL(a.href)}
+document.getElementById("exportBtn").onclick=()=>{const d=load(),head=["Дата","Время","КГТ3 подняли","КГТ3 вымылось","КГТ2 подняли","КГТ2 вымылось","Питание подняли","Питание вымылось","Поднято накопительно","Осталось всего"],esc=v=>`"${String(v??"").replace(/"/g,'""')}"`,lines=[head.map(esc).join(";")];d.entries.forEach((e,i)=>{const part=d.entries.slice(0,i+1);lines.push([nice(e.date),e.time,e.kgt3||0,e.kgt3Washed||0,e.kgt2||0,e.kgt2Washed||0,e.food||0,e.foodWashed||0,liftedTotal(d,i),totalRemainingByEntries(d,part)].map(esc).join(";"))});const blob=new Blob(["\ufeff"+lines.join("\n")],{type:"text/csv;charset=utf-8"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`mezzanine-balance-${today()}.csv`;a.click();URL.revokeObjectURL(a.href)}
+
 render();
 </script>
 </body>
